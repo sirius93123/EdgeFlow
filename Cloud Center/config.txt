@@ -1,0 +1,7 @@
+C： 1
+T： 1
+I： 0
+L： 1
+S： 0.3
+IP： 192.168.1.1
+JAR_PATH: task.jar
