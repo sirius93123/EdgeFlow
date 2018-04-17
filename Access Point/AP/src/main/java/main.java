@@ -158,7 +158,7 @@ public class main {
                 schedule.initConfig();
                 break;
             case 2:
-                NodeConfig nodeA = new  NodeConfig(true, 2 , 2, "/home/t3/AP","127.0.0.1", 1236, "127.0.0.1",1236, 1000);
+                NodeConfig nodeA = new  NodeConfig(true, 2 , 2, "/home/t4/AP","192.168.2.1", 1236, "192.168.2.1",1236, 1000);
                 nodeA.setFilePort(1234);
                 NodeConfig.logger.debug("Init default node");
                 main.testNodeConfig(nodeA);
