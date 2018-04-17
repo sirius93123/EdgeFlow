@@ -25,6 +25,16 @@ public class NodeConfig {
     public String computingClass;
     public String deliverClass;
 
+    public double getStrategyPercentage() {
+        return StrategyPercentage;
+    }
+
+    public void setStrategyPercentage(double strategyPercentage) {
+        StrategyPercentage = strategyPercentage;
+    }
+
+    public double StrategyPercentage; // the task-offloading strategy at this layer
+
     public double  generationDelta; // the time delta for the data generation
 
     int fileServerPort = 8000;

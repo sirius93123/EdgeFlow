@@ -319,6 +319,8 @@ public class ScheduleModule implements ManagerInterface {
             return;
         }
 
+        this.step = node.getStrategyPercentage();
+
 
         computingInterface = JarHelper.loadComputeInterface(node.getComputingPath(), node.getComputingClass());
         if(node.getLayer() == 3) {
