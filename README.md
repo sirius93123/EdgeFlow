@@ -4,27 +4,34 @@ Demo for EdgeFlow framework.
 
 ## Usage
 
-First, create a `config.txt` file in Edge Device. Each line represents a configuration to run against, which consists of the following information: computing capacity, data generation rate, communication speed, data compression rate and package size, the IP of upper layer node. 
+First, load a `config.txt` file in the project of the main function. 
+Each line represents a configuration to run against,
+which consists of the following information: 
+the layer number,
+computing capacity (for simulate the difference of different layer),
+data generation rate, 
+the IP and Port of upper layer node,
+the IP and Port of the CC layer node
 
 Third, follow the bash commands below and initialize the system from Cloud layer to Edge Device layer in order.
 
 ### Cloud
 
 ```
-python virtual_tunnel.py
-java -jar CC.jar CC.config
+python tunnel.py
+java -jar CC.jar
 ```
 
 ### Access Point
 
 ```
-python tunnel_server.py
-java -jar AP.jar AP.config
+python tunnel.py
+java -jar AP.jar
 ```
 
 ### Edge Device
 
 ```
-python tunnel_client.py
-java -jar ED.jar ED.config
+python tunnel.py
+java -jar ED.jar
 ```
