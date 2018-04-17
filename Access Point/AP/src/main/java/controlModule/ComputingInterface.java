@@ -1,12 +1,12 @@
 package controlModule;
 
 /**
- * computing module inferface
+ * computing module interface
  */
 public interface ComputingInterface {
 
     /**
-     * dynamic load funciton Jar to process the computingFunction
+     * the computing interface
      * @param temp
      */
     void computingFunction(taskFile temp);
