@@ -150,6 +150,7 @@ public class main {
                 NodeConfig nodec = new  NodeConfig(true, 3 , 3, "/home/t3/ED","192.168.2.2", 1234, "192.168.2.1",1236, 500);
                 NodeConfig.logger.debug("Init default node");
                 main.testNodeConfig(nodec);
+                nodeCC.setStrategyPercentage(0.5);
                 nodec.setGenerationDelta(250);
                 nodec.setComputeSpeed(500);
                 nodec.setNodeName("ED1");
@@ -160,6 +161,7 @@ public class main {
             case 2:
                 NodeConfig nodeA = new  NodeConfig(true, 2 , 2, "/home/t4/AP","192.168.2.1", 1236, "192.168.2.1",1236, 1000);
                 nodeA.setFilePort(1234);
+                nodeCC.setStrategyPercentage(0.5);
                 NodeConfig.logger.debug("Init default node");
                 main.testNodeConfig(nodeA);
                 nodeA.setComputeSpeed(167);
@@ -172,6 +174,7 @@ public class main {
                 staticClass.initstaticClass();
                 NodeConfig nodeCC = new  NodeConfig(true, 1 , 2, "/home/t5/CC","127.0.0.1", 1235, "127.0.0.1",2000, 1000);
                 nodeCC.setFilePort(1236);
+                nodeCC.setStrategyPercentage(0.5);
                 NodeConfig.logger.debug("Init default node");
                 main.testNodeConfig(nodeCC);
                 nodeCC.setComputeSpeed(50);
