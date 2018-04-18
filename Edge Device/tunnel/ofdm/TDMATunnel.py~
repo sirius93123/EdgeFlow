@@ -136,6 +136,7 @@ class cs_mac(object):
     is just an example.
     """
     def __init__(self, verbose=False):
+        self.tun_fd = tun_fd       # file descriptor for TUN/TAP interface
         self.verbose = verbose
         self.tb = None             # top block (access to PHY)
 

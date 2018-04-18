@@ -44,8 +44,8 @@ class Tunnel():
         self.mac = mac
     def macRx(self,ok, payload):
         buf = self.icmpfd.recv(icmp.BUFFER_SIZE)
-        data = self.packet.parse(buf, DEBUG)
-        ip = socket.inet_ntoa(self.packet.src)
+        data = packet.parse(buf, DEBUG)
+        ip = socket.inet_ntoa(packet.src)
         os.write(self.tfd, data)
 
     def close(self):
@@ -148,11 +148,12 @@ def usage(status = 0):
     sys.exit(status)
 
 if __name__=="__main__":
-    MODE=2
+    MODE=1
     CODE=86
-    IP="192.168.10.2"
-    PORT=22
     IFACE_IP = "192.168.2.1/24"
+
+    if MODE == 0 or CODE == 0:
+        usage(1)
 
     tun = Tunnel()
     tun.create()

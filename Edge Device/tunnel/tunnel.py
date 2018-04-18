@@ -38,13 +38,14 @@ class Tunnel():
         self.flag = 1
         self.TrueFlag = 1
         self.mac = 0
+        self.packet = 0
         print(self.clients)
     def macIni(self, mac):
         self.mac = mac
     def macRx(self,ok, payload):
         buf = self.icmpfd.recv(icmp.BUFFER_SIZE)
-        data = packet.parse(buf, DEBUG)
-        ip = socket.inet_ntoa(packet.src)
+        data = self.packet.parse(buf, DEBUG)
+        ip = socket.inet_ntoa(self.packet.src)
         os.write(self.tfd, data)
 
     def close(self):
@@ -56,9 +57,9 @@ class Tunnel():
         os.system("ip addr add %s dev %s" % (ip, self.tname))
 
     def serverRun(self):
-        self.time1 = time.time()
+        time1 = time.time()
         self.icmpfd = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
-        packet = icmp.ICMPPacket()
+        self.packet = icmp.ICMPPacket()
         self.client_seqno = 1
 
         while True:
@@ -69,8 +70,9 @@ class Tunnel():
                     self.flag = 1
                 else:
                     self.flag = 0
-                data = self.flag
-                buf = packet.create(8, 90, 8000, 1, data)
+                print("send flag")
+                data = chr(self.flag & 0xff)
+                buf = self.packet.create(8, 90, 8000, 1, data)
                 for ip in self.clients:
                         #    print(ip)
                     self.icmpfd.sendto(buf, (ip, 22))
@@ -81,16 +83,16 @@ class Tunnel():
                     if DEBUG: os.write(1, ">")
                     data = os.read(self.tfd, MTU)
                     if MODE == 1: # Server
-                        buf = packet.create(8, 87, 8000, 1, data)
+                        buf = self.packet.create(8, 87, 8000, 1, data)
                         for ip in self.clients:
                             self.icmpfd.sendto(buf, (ip, 22))
                 elif r == self.icmpfd:
                     if DEBUG: os.write(1, "<")
                     buf = self.icmpfd.recv(icmp.BUFFER_SIZE)
-                    data = packet.parse(buf, DEBUG)
-                    ip = socket.inet_ntoa(packet.src)
+                    data = self.packet.parse(buf, DEBUG)
+                    ip = socket.inet_ntoa(self.packet.src)
                     #print("WWWWWWWWWWWWWWWWWWWW")
-                    if packet.code in (CODE, CODE+1):
+                    if self.packet.code in (CODE, CODE+1):
                          # Simply write the packet to local or forward them to other clients ???
                          os.write(self.tfd, data)
                          #self.clients[key]["aliveTime"] = time.time()
@@ -99,10 +101,10 @@ class Tunnel():
 
     def run(self):
         if MODE == 1:
-            self.serverRUN()
+            self.serverRun()
 
         self.icmpfd = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
-        packet = icmp.ICMPPacket()
+        self.packet = icmp.ICMPPacket()
         self.client_seqno = 1
 
         dataFlag = False
@@ -116,7 +118,7 @@ class Tunnel():
                     if DEBUG: os.write(1, ">")
                     if dataFlag == False:
                         datatemp = os.read(self.tfd, MTU)
-                        buf = packet.create(8, 86, 8000, 1, datatemp)
+                        buf = self.packet.create(8, 86, 8000, 1, datatemp)
                         dataFlag = True
                     if self.usrpFlag == True:
                         if len(datatemp) > 500:
@@ -127,17 +129,17 @@ class Tunnel():
                 elif r == self.icmpfd:
                     if DEBUG: os.write(1, "<")
                     buf = self.icmpfd.recv(icmp.BUFFER_SIZE)
-                    data = packet.parse(buf, DEBUG)
-                    ip = socket.inet_ntoa(packet.src)
+                    data = self.packet.parse(buf, DEBUG)
+                    ip = socket.inet_ntoa(self.packet.src)
                     #print("WWWWWWWWWWWWWWWWWWWW")
-                    if packet.code in (CODE, CODE+1):
+                    if self.packet.code in (CODE, CODE+1):
                          # Simply write the packet to local or forward them to other clients ???
                          os.write(self.tfd, data)
 
-                    if packet.code in (90, 91):
+                    if self.packet.code in (90, 91):
                           if data[0] == self.TrueFlag:
                              self.usrpFlag = True
-                           else:
+                          else:
                               self.usrpFlag = False
                          #self.clients[key]["aliveTime"] = time.time()
 
@@ -146,22 +148,9 @@ def usage(status = 0):
     sys.exit(status)
 
 if __name__=="__main__":
-    opts = getopt.getopt(sys.argv[1:],"s:c:l:hd")
-    for opt,optarg in opts[0]:
-        if opt == "-h":
-            usage()
-        elif opt == "-d":
-            DEBUG += 1
-        elif opt == "-s":
-            MODE = 1
-            CODE = int(optarg)
-        elif opt == "-c":
-            MODE = 2
-            IP,CODE,PORT = optarg.split(",")
-            CODE = int(CODE)
-            PORT = int(PORT)
-        elif opt == "-l":
-            IFACE_IP = optarg
+    MODE=1
+    CODE=86
+    IFACE_IP = "192.168.2.1/24"
 
     if MODE == 0 or CODE == 0:
         usage(1)
@@ -170,7 +159,7 @@ if __name__=="__main__":
     tun.create()
     print "Allocated interface %s" % (tun.tname)
     tun.config(IFACE_IP)
-    mac = MacInit(tun.macRx)
+    mac = ofdm.TDMATunnel.MacInit(tun.macRx)
     tun.macIni(mac)
     try:
         tun.run()

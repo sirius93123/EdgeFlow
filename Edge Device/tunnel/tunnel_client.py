@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+## need update
 import os, sys
 import hashlib
 import getopt
@@ -8,7 +8,10 @@ import icmp
 import time
 import struct
 import socket, select
-import ofdm.tunnel
+import random
+import time
+
+import ofdm.TDMATunnel
 
 SHARED_PASSWORD = hashlib.md5("xiaoxia").digest()
 TUNSETIFF = 0x400454ca
@@ -17,137 +20,146 @@ IFF_TUN   = 0x0001
 MODE = 0
 DEBUG = 0
 PORT = 0
+IP="192.168.10.4"
 IFACE_IP = "10.0.0.1"
 MTU = 1500
 CODE = 86
 TIMEOUT = 60*10 # seconds
-max_size=1400
 
 class Tunnel():
-    def create(self, ofdm):
+    def create(self):
         self.tfd = os.open("/dev/net/tun", os.O_RDWR)
         ifs = fcntl.ioctl(self.tfd, TUNSETIFF, struct.pack("16sH", "t%d", IFF_TUN))
         self.tname = ifs[:16].strip("\x00")
-        self.ofdm = ofdm
+        self.clients = []
+        self.usrpFlag = True
+        self.percentage = 0.5
+        self.time1 = 0
+        self.flag = 1
+        self.TrueFlag = 1
+        self.mac = 0
+        self.packet = 0
+        print(self.clients)
+    def macIni(self, mac):
+        self.mac = mac
+    def macRx(self,ok, payload):
+        buf = self.icmpfd.recv(icmp.BUFFER_SIZE)
+        data = self.packet.parse(buf, DEBUG)
+        ip = socket.inet_ntoa(self.packet.src)
+        os.write(self.tfd, data)
 
     def close(self):
         os.close(self.tfd)
 
     def config(self, ip):
         os.system("ip link set %s up" % (self.tname))
-        os.system("ip link set %s mtu 1500" % (self.tname))
+        os.system("ip link set %s mtu 1000" % (self.tname))
         os.system("ip addr add %s dev %s" % (ip, self.tname))
 
-    def parse(self, buf):
-        dst=buf[20:24]
-        return socket.inet_ntoa(dst)
+    def serverRun(self):
+        time1 = time.time()
+        self.icmpfd = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
+        self.packet = icmp.ICMPPacket()
+        self.client_seqno = 1
+
+        while True:
+            rset = select.select([self.icmpfd, self.tfd], [], [])[0]
+            if time.time() - time1 > 0.05:
+                time1 = time.time()
+                if random.random() > self.percentage:
+                    self.flag = 1
+                else:
+                    self.flag = 0
+                print("send flag")
+                data = chr(self.flag & 0xff)
+                buf = self.packet.create(8, 90, 8000, 1, data)
+                for ip in self.clients:
+                        #    print(ip)
+                    self.icmpfd.sendto(buf, (ip, 22))
+
+            for r in rset:
+                if r == self.tfd:
+                    #print("tun")
+                    if DEBUG: os.write(1, ">")
+                    data = os.read(self.tfd, MTU)
+                    if MODE == 1: # Server
+                        buf = self.packet.create(8, 87, 8000, 1, data)
+                        for ip in self.clients:
+                            self.icmpfd.sendto(buf, (ip, 22))
+                elif r == self.icmpfd:
+                    if DEBUG: os.write(1, "<")
+                    buf = self.icmpfd.recv(icmp.BUFFER_SIZE)
+                    data = self.packet.parse(buf, DEBUG)
+                    ip = socket.inet_ntoa(self.packet.src)
+                    #print("WWWWWWWWWWWWWWWWWWWW")
+                    if self.packet.code in (CODE, CODE+1):
+                         # Simply write the packet to local or forward them to other clients ???
+                         os.write(self.tfd, data)
+                         #self.clients[key]["aliveTime"] = time.time()
+
+
 
     def run(self):
-        self.udpfd=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)
-        self.udpfd.bind(("192.168.10.4",8000))
-        self.udpfd.setblocking(False)
-        epoll = select.epoll()
-        epoll.register(self.udpfd.fileno(), select.EPOLLIN)
-        epoll.register(self.tfd, select.EPOLLIN)
-        tunfd=self.tfd
-        no=1
-        socketfd=self.udpfd.fileno()
-        time0=0
-        time1=0
-        time2=9
-        time3=0
-        time4=90
-        time5=0
-        time6=0
-        time7=9
-        time8=0
-        time9=0
+        if MODE == 1:
+            self.serverRun()
+
+        self.icmpfd = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.getprotobyname("icmp"))
+        self.packet = icmp.ICMPPacket()
+        self.client_seqno = 1
+
+        dataFlag = False
+        datatemp = 0
+        buf = 0
         while True:
-            time1=time.time()
-            epoll_list= epoll.poll(0.001)
-            time2=time.time()
-            print("EEEEEEEEEEEEEEEEEEEEEEEEEEEE")
-            print(time2-time1)
-            if not epoll_list:
-                 print("no event")
-                 continue
-            for fd, event in epoll_list:
-                if fd == tunfd:
-                    print("Tun")
-                if fd == socketfd:
-                    print("socket")
-            print("TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT")
-            for fd, event in epoll_list:
-                if event & select.EPOLLIN:
-                     if fd == tunfd and key == 1:
-                        data=os.read(self.tfd, max_size)
-                        time4=time.time()
-                        if MODE == 1: # Server
-                            dst=self.parse(data)
-                            print(dst)
-                            dst="192.168.10.3"
-                            self.ofdm.usrpSend(data,(dst,8000))
-                            print("AAAAAAAAAAAAA")
-                            no=no+1
-                            print(no)
-                            #print("send success")
-                        else: # Client
-                            self.udpfd.sendto(data, (IP, 8000))
-                        time5=time.time()
-                     elif fd == socketfd:##
-                        time6=time.time()
-                        data,address= self.udpfd.recvfrom(max_size)
-                        if data.length == 10:
-                            key = 1
-                        if data.length == 11:
-                            key = 0
-                        time7=time.time()
-                        os.write(self.tfd, data)
-                        time8=time.time()
-                print("WWWWWWWWWWWWWWWWWWWWWWWWWw")
-                print(time.time() - time9)
-                if time.time()-time9 > 0.1:
-                    print("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG")
-                time9 = time.time()
-                print("DDDD")
-                print(time4 - time3)
-                print("FFFFF")
-                print(time5-time4)
-                print("GGGGG")
-                print(time7-time6)
-                print("QQQQ")
-                print(time8-time7)
-                        #self.clients[key]["aliveTime"] = time.time()
+            rset = select.select([self.icmpfd, self.tfd], [], [])[0]
+            for r in rset:
+                if r == self.tfd:
+                    #print("tun")
+                    if DEBUG: os.write(1, ">")
+                    if dataFlag == False:
+                        datatemp = os.read(self.tfd, MTU)
+                        buf = self.packet.create(8, 86, 8000, 1, datatemp)
+                        dataFlag = True
+                    if self.usrpFlag == True:
+                        if len(datatemp) > 500:
+                            self.mac.sendto(buf)
+                        else:
+                            self.icmpfd.sendto(buf, (IP, 22))
+                        dataFlag = False
+                elif r == self.icmpfd:
+                    if DEBUG: os.write(1, "<")
+                    buf = self.icmpfd.recv(icmp.BUFFER_SIZE)
+                    data = self.packet.parse(buf, DEBUG)
+                    ip = socket.inet_ntoa(self.packet.src)
+                    #print("WWWWWWWWWWWWWWWWWWWW")
+                    if self.packet.code in (CODE, CODE+1):
+                         # Simply write the packet to local or forward them to other clients ???
+                         os.write(self.tfd, data)
+
+                    if self.packet.code in (90, 91):
+                          if data[0] == self.TrueFlag:
+                             self.usrpFlag = True
+                          else:
+                              self.usrpFlag = False
+                         #self.clients[key]["aliveTime"] = time.time()
 
 def usage(status = 0):
     print "Usage: icmptun [-s code|-c serverip,code,id] [-hd] [-l localip]"
     sys.exit(status)
 
 if __name__=="__main__":
-    opts = getopt.getopt(sys.argv[1:],"s:c:l:hd")
-    for opt,optarg in opts[0]:
-        if opt == "-h":
-            usage()
-        elif opt == "-d":
-            DEBUG += 1
-        elif opt == "-s":
-            MODE = 1
-            CODE = int(optarg)
-        elif opt == "-c":
-            MODE = 2
-            IP,CODE,PORT = optarg.split(",")
-            CODE = int(CODE)
-            PORT = int(PORT)
-        elif opt == "-l":
-            IFACE_IP = optarg
+    MODE=2
+    CODE=86
+    IP="192.168.10.2"
+    PORT=22
+    IFACE_IP = "192.168.2.1/24"
 
-    if MODE == 0 or CODE == 0:
-        usage(1)
-    mac = cs_mac(tun_fd, verbose=True)
-    tun = Tunnel(mac)
+    tun = Tunnel()
     tun.create()
     print "Allocated interface %s" % (tun.tname)
     tun.config(IFACE_IP)
+    mac = ofdm.TDMATunnel.MacInit(tun.macRx)
+    tun.macIni(mac)
     try:
         tun.run()
     except KeyboardInterrupt:
